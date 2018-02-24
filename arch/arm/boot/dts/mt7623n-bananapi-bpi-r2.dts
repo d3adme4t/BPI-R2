@@ -96,11 +96,11 @@
 			default-state = "off";
 		};
 	};
-
+/*
 	memory@80000000 {
 		reg = <0 0x80000000 0 0x40000000>;
 	};
-
+*/
 	vdd_fixed_vgpu_reg: fixedregulator@0 {
 		compatible = "regulator-fixed";
 		regulator-name = "vdd_fixed_vgpu";
@@ -159,7 +159,7 @@
 			compatible = "mediatek,mt7530";
 			#address-cells = <1>;
 			#size-cells = <0>;
-			reg = <0>;
+			//reg = <0>;
 			pinctrl-names = "default";
 			reset-gpios = <&pio 33 0>;
 			core-supply = <&mt6323_vpa_reg>;
