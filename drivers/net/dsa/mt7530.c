@@ -674,6 +674,11 @@ mt7530_cpu_port_enable(struct mt7530_priv *priv,
 	mt7530_write(priv, MT7530_PVC_P(port),
 		     PORT_SPEC_TAG);
 
+	/* Enable Mediatek header mode on the GMAC that the cpu port
+	 * connects to */
+	regmap_write_bits(priv->ethernet, MTK_GDMA_FWD_CFG(port),
+			  GDMA_SPEC_TAG, GDMA_SPEC_TAG);
+
 	/* Setup the MAC by default for the cpu port */
 	mt7530_write(priv, MT7530_PMCR_P(port), PMCR_CPUP_LINK);
 
@@ -991,6 +996,11 @@ mt7530_setup(struct dsa_switch *ds)
 	val = mt7530_read(priv, MT7530_MHWTRAP);
 	val &= ~MHWTRAP_P6_DIS & ~MHWTRAP_PHY_ACCESS;
 	val |= MHWTRAP_MANUAL;
+	if (!dsa_is_cpu_port(ds, 5)) {
+		val |= MHWTRAP_P5_DIS;
+		val |= MHWTRAP_P5_MAC_SEL;
+		val |= MHWTRAP_P5_RGMII_MODE;
+	}
 	mt7530_write(priv, MT7530_MHWTRAP, val);
 
 	/* Enable and reset MIB counters */
@@ -1037,10 +1047,10 @@ static const struct dsa_switch_ops mt7530_switch_ops = {
 };
 
 static int
-mt7530_probe(struct mdio_device *mdiodev)
+mt7530_probe(struct platform_device *mdiodev)
 {
 	struct mt7530_priv *priv;
-	struct device_node *dn;
+	struct device_node *dn, *mdio;
 
 	dn = mdiodev->dev.of_node;
 
@@ -1088,7 +1098,12 @@ mt7530_probe(struct mdio_device *mdiodev)
 		}
 	}
 
-	priv->bus = mdiodev->bus;
+	mdio = of_parse_phandle(dn, "dsa,mii-bus", 0);
+	if (!mdio)
+		return -EINVAL;
+	priv->bus = of_mdio_find_bus(mdio);
+	if (!priv->bus)
+		return -EPROBE_DEFER;
 	priv->dev = &mdiodev->dev;
 	priv->ds->priv = priv;
 	priv->ds->ops = &mt7530_switch_ops;
@@ -1098,8 +1113,8 @@ mt7530_probe(struct mdio_device *mdiodev)
 	return dsa_register_switch(priv->ds);
 }
 
-static void
-mt7530_remove(struct mdio_device *mdiodev)
+static int
+mt7530_remove(struct platform_device *mdiodev)
 {
 	struct mt7530_priv *priv = dev_get_drvdata(&mdiodev->dev);
 	int ret = 0;
@@ -1116,6 +1131,8 @@ mt7530_remove(struct mdio_device *mdiodev)
 
 	dsa_unregister_switch(priv->ds);
 	mutex_destroy(&priv->reg_mutex);
+
+	return 0;
 }
 
 static const struct of_device_id mt7530_of_match[] = {
@@ -1123,16 +1140,16 @@ static const struct of_device_id mt7530_of_match[] = {
 	{ /* sentinel */ },
 };
 
-static struct mdio_driver mt7530_mdio_driver = {
+static struct platform_driver mtk_mt7530_driver = {
 	.probe  = mt7530_probe,
 	.remove = mt7530_remove,
-	.mdiodrv.driver = {
+	.driver = {
 		.name = "mt7530",
 		.of_match_table = mt7530_of_match,
 	},
 };
+module_platform_driver(mtk_mt7530_driver);
 
-mdio_module_driver(mt7530_mdio_driver);
 
 MODULE_AUTHOR("Sean Wang <sean.wang@mediatek.com>");
 MODULE_DESCRIPTION("Driver for Mediatek MT7530 Switch");

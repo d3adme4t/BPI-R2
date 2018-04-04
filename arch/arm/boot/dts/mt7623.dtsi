@@ -374,6 +374,7 @@
 			     "syscon";
 		reg = <0 0x10209000 0 0x1000>;
 		#clock-cells = <1>;
+		#reset-cells = <1>;
 	};
 
 	hdmi_phy: hdmi-phy@10209100 {
