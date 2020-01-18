@@ -21,6 +21,10 @@
 	power-domains = <&scpsys MT7623A_POWER_DOMAIN_ETH>;
 };
 
+&mali {
+	status = "disabled";
+};
+
 &nandc {
 	power-domains = <&scpsys MT7623A_POWER_DOMAIN_IFR_MSC>;
 };
