@@ -68,15 +68,23 @@ int lima_mmu_init(struct lima_ip *ip)
 	if (ip->id == lima_ip_ppmmu_bcast)
 		return 0;
 
+	dev_err(dev->dev, "mmu %s dte write: ADDR:%x,val:%x", lima_ip_name(ip),LIMA_MMU_DTE_ADDR,0xCAFEBABE);
 	mmu_write(LIMA_MMU_DTE_ADDR, 0xCAFEBABE);
-	if (mmu_read(LIMA_MMU_DTE_ADDR) != 0xCAFEB000) {
+	u32  res;
+	res=mmu_read(LIMA_MMU_DTE_ADDR);
+	dev_err(dev->dev, "mmu %s dte read: ADDR:%x,val:%x", lima_ip_name(ip),LIMA_MMU_DTE_ADDR,res);
+	if (res != 0xCAFEB000) {
+		
 		dev_err(dev->dev, "mmu %s dte write test fail\n", lima_ip_name(ip));
 		return -EIO;
 	}
 
+//	dev_err(dev->dev, "mmu %s mmu_write: ADDR:%x,val:%x,:%x", LIMA_MMU_COMMAND,LIMA_MMU_DTE_ADDR,LIMA_MMU_COMMAND_HARD_RESET);
 	mmu_write(LIMA_MMU_COMMAND, LIMA_MMU_COMMAND_HARD_RESET);
 	err = lima_mmu_send_command(LIMA_MMU_COMMAND_HARD_RESET,
 				    LIMA_MMU_DTE_ADDR, v, v == 0);
+				    
+//	dev_err(dev->dev, "Err:%i", err);
 	if (err)
 		return err;
 

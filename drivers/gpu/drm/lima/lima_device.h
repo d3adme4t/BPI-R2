@@ -56,6 +56,8 @@ struct lima_ip {
 	int irq;
 
 	union {
+		/* pmu */
+		unsigned switch_delay;
 		/* gp/pp */
 		bool async_reset;
 		/* l2 cache */

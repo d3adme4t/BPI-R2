@@ -79,6 +79,14 @@
 		regulator-always-on;
 	};
 
+	vdd_fixed_vgpu_reg: fixedregulator@0 {
+		compatible = "regulator-fixed";
+		regulator-name = "vdd_fixed_vgpu";
+		regulator-min-microvolt = <1150000>;
+		regulator-max-microvolt = <1150000>;
+		};
+
+
 	gpio-keys {
 		compatible = "gpio-keys";
 		pinctrl-names = "default";
@@ -458,3 +466,7 @@
 	status = "okay";
 };
 
+&mali {
+    vdd_g3d-supply = <&vdd_fixed_vgpu_reg>;
+    status = "okay";
+};

@@ -785,7 +785,7 @@
 		status = "disabled";
 	};
 
-	g3dsys: syscon@13000000 {
+	g3dsys: clock-controller@13000000 {
 		compatible = "mediatek,mt7623-g3dsys",
 			     "mediatek,mt2701-g3dsys",
 			     "syscon";
