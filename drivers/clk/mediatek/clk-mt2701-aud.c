@@ -167,6 +167,8 @@ static int clk_mt2701_aud_probe(struct platform_device *pdev)
 	if (r)
 		goto err_plat_populate;
 
+	printk ("aud clock provider probe success!: %s.\n",pdev->name);
+
 	return 0;
 
 err_plat_populate:

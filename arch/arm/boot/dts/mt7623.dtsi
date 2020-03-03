@@ -763,6 +763,14 @@
 		};
 	};
 
+	mediatek,audio_codec {
+		compatible = "mediatek,audio-codec";
+	};
+
+	mediatek,platform {
+		compatible = "mediatek,platform";
+	};
+
 	mmc1: mmc@11240000 {
 		compatible = "mediatek,mt7623-mmc",
 			     "mediatek,mt2701-mmc";

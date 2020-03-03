@@ -972,6 +972,8 @@ static int mt2701_afe_pcm_probe(struct snd_soc_component *component)
 
 	snd_soc_component_init_regmap(component, afe->regmap);
 
+	printk ("mt2701-audio probe\n");
+
 	return 0;
 }
 
@@ -1411,7 +1413,7 @@ static int mt2701_afe_pcm_dev_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_err(dev, "init clock error\n");
 		return ret;
-	}
+	}else dev_err(dev, "init clock OK\n");
 
 	platform_set_drvdata(pdev, afe);
 
@@ -1420,7 +1422,7 @@ static int mt2701_afe_pcm_dev_probe(struct platform_device *pdev)
 		ret = mt2701_afe_runtime_resume(dev);
 		if (ret)
 			goto err_pm_disable;
-	}
+	} else dev_err(dev, "runtime enable OK\n");
 	pm_runtime_get_sync(dev);
 
 	ret = devm_snd_soc_register_component(&pdev->dev, &mtk_afe_pcm_platform,
@@ -1428,7 +1430,7 @@ static int mt2701_afe_pcm_dev_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_warn(dev, "err_platform\n");
 		goto err_platform;
-	}
+	} else dev_warn(dev, "ok_platform\n");
 
 	ret = devm_snd_soc_register_component(&pdev->dev,
 					 &mt2701_afe_pcm_dai_component,
@@ -1437,7 +1439,7 @@ static int mt2701_afe_pcm_dev_probe(struct platform_device *pdev)
 	if (ret) {
 		dev_warn(dev, "err_dai_component\n");
 		goto err_platform;
-	}
+	} else dev_warn(dev, "ok_dai_component\n");
 
 	return 0;
 

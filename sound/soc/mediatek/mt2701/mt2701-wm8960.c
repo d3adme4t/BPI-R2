@@ -105,6 +105,7 @@ static struct snd_soc_card mt2701_wm8960_card = {
 
 static int mt2701_wm8960_machine_probe(struct platform_device *pdev)
 {
+	dev_err(&pdev->dev, "Sarting probe\n");
 	struct snd_soc_card *card = &mt2701_wm8960_card;
 	struct device_node *platform_node, *codec_node;
 	struct snd_soc_dai_link *dai_link;
