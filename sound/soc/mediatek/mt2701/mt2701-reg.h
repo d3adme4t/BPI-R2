@@ -102,7 +102,7 @@
 
 #define AFE_IRQ_MCU_CON		0x03a0
 #define AFE_IRQ_STATUS		0x03a4
-#define AFE_IRQ_CLR		0x03a8
+#define AFE_IRQ_CLR            0x03a8
 #define AFE_IRQ_CNT1		0x03ac
 #define AFE_IRQ_CNT2		0x03b0
 #define AFE_IRQ_MCU_EN		0x03b4
