@@ -7,6 +7,7 @@
 #include <linux/rhashtable.h>
 #include <linux/if_ether.h>
 #include <linux/ip.h>
+#include <linux/ipv6.h>
 #include <net/flow_offload.h>
 #include <net/pkt_cls.h>
 #include <net/dsa.h>
@@ -20,6 +21,11 @@ struct mtk_flow_data {
 			__be32 src_addr;
 			__be32 dst_addr;
 		} v4;
+
+		struct {
+			struct in6_addr src_addr;
+			struct in6_addr dst_addr;
+		} v6;
 	};
 
 	__be16 src_port;
@@ -62,6 +68,14 @@ mtk_flow_set_ipv4_addr(struct mtk_foe_entry *foe, struct mtk_flow_data *data,
 	return mtk_foe_entry_set_ipv4_tuple(foe, egress,
 					    data->v4.src_addr, data->src_port,
 					    data->v4.dst_addr, data->dst_port);
+}
+
+static int
+mtk_flow_set_ipv6_addr(struct mtk_foe_entry *foe, struct mtk_flow_data *data)
+{
+	return mtk_foe_entry_set_ipv6_tuple(foe,
+					    data->v6.src_addr.s6_addr32, data->src_port,
+					    data->v6.dst_addr.s6_addr32, data->dst_port);
 }
 
 static void
@@ -120,6 +134,29 @@ mtk_flow_mangle_ipv4(const struct flow_action_entry *act,
 		break;
 	default:
 		return -EINVAL;
+	}
+
+	memcpy(dest, &act->mangle.val, sizeof(u32));
+
+	return 0;
+}
+
+static int
+mtk_flow_mangle_ipv6(const struct flow_action_entry *act,
+		     struct mtk_flow_data *data)
+{
+	__be32 *dest;
+	size_t offset_of_ip6_daddr = offsetof(struct ipv6hdr, daddr);
+	size_t offset_of_ip6_saddr = offsetof(struct ipv6hdr, saddr);
+	u32 idx;
+
+	if (act->mangle.offset >= offset_of_ip6_daddr && act->mangle.offset < offset_of_ip6_daddr) {
+		idx = (act->mangle.offset - offset_of_ip6_saddr) / 4;
+		dest = &data->v6.src_addr.s6_addr32[idx];
+	} else if (act->mangle.offset >= offset_of_ip6_daddr &&
+		   act->mangle.offset < offset_of_ip6_daddr + 16) {
+		idx = (act->mangle.offset - offset_of_ip6_daddr) / 4;
+		dest = &data->v6.dst_addr.s6_addr32[idx];
 	}
 
 	memcpy(dest, &act->mangle.val, sizeof(u32));
@@ -249,6 +286,9 @@ mtk_flow_offload_replace(struct mtk_eth *eth, struct flow_cls_offload *f)
 	case FLOW_DISSECTOR_KEY_IPV4_ADDRS:
 		offload_type = MTK_PPE_PKT_TYPE_IPV4_HNAPT;
 		break;
+	case FLOW_DISSECTOR_KEY_IPV6_ADDRS:
+		offload_type = MTK_PPE_PKT_TYPE_IPV6_ROUTE_5T;
+		break;
 	default:
 		return -EOPNOTSUPP;
 	}
@@ -284,6 +324,18 @@ mtk_flow_offload_replace(struct mtk_eth *eth, struct flow_cls_offload *f)
 		mtk_flow_set_ipv4_addr(&foe, &data, false);
 	}
 
+
+	if (addr_type == FLOW_DISSECTOR_KEY_IPV6_ADDRS) {
+		struct flow_match_ipv6_addrs addrs;
+
+		flow_rule_match_ipv6_addrs(rule, &addrs);
+
+		data.v6.src_addr = addrs.key->src;
+		data.v6.dst_addr = addrs.key->dst;
+
+		mtk_flow_set_ipv6_addr(&foe, &data);
+	}
+
 	flow_action_for_each(i, act, &rule->action) {
 		if (act->id != FLOW_ACTION_MANGLE)
 			continue;
@@ -295,6 +347,9 @@ mtk_flow_offload_replace(struct mtk_eth *eth, struct flow_cls_offload *f)
 			break;
 		case FLOW_ACT_MANGLE_HDR_TYPE_IP4:
 			err = mtk_flow_mangle_ipv4(act, &data);
+			break;
+		case FLOW_ACT_MANGLE_HDR_TYPE_IP6:
+			err = mtk_flow_mangle_ipv6(act, &data);
 			break;
 		case FLOW_ACT_MANGLE_HDR_TYPE_ETH:
 			/* handled earlier */
