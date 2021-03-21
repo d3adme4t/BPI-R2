@@ -552,7 +552,7 @@ int nf_flow_table_init(struct nf_flowtable *flowtable)
 	mutex_lock(&flowtable_lock);
 	list_add(&flowtable->list, &flowtables);
 	mutex_unlock(&flowtable_lock);
-	flowtable->flags = NF_FLOWTABLE_HW_OFFLOAD;
+
 	return 0;
 }
 EXPORT_SYMBOL_GPL(nf_flow_table_init);
