@@ -145,18 +145,20 @@ static int
 mtk_flow_mangle_ipv6(const struct flow_action_entry *act,
 		     struct mtk_flow_data *data)
 {
-	__be32 *dest;
 	size_t offset_of_ip6_daddr = offsetof(struct ipv6hdr, daddr);
 	size_t offset_of_ip6_saddr = offsetof(struct ipv6hdr, saddr);
+	__be32 *dest;
 	u32 idx;
 
-	if (act->mangle.offset >= offset_of_ip6_daddr && act->mangle.offset < offset_of_ip6_daddr) {
-		idx = (act->mangle.offset - offset_of_ip6_saddr) / 4;
-		dest = &data->v6.src_addr.s6_addr32[idx];
-	} else if (act->mangle.offset >= offset_of_ip6_daddr &&
-		   act->mangle.offset < offset_of_ip6_daddr + 16) {
-		idx = (act->mangle.offset - offset_of_ip6_daddr) / 4;
-		dest = &data->v6.dst_addr.s6_addr32[idx];
+	switch (act->mangle.offset) {
+		case offsetof(struct ipv6hdr, saddr):
+			idx = (act->mangle.offset - offset_of_ip6_saddr) / 4;
+			dest = &data->v6.src_addr.s6_addr32[idx];
+		break;
+		case offsetof(struct ipv6hdr, daddr):
+			idx = (act->mangle.offset - offset_of_ip6_daddr) / 4;
+			dest = &data->v6.dst_addr.s6_addr32[idx];
+		break;
 	}
 
 	memcpy(dest, &act->mangle.val, sizeof(u32));
