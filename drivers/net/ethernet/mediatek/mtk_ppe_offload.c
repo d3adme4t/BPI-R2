@@ -145,18 +145,21 @@ static int
 mtk_flow_mangle_ipv6(const struct flow_action_entry *act,
 		     struct mtk_flow_data *data)
 {
-	struct in6_addr *dest;
+	__be32 *dest = 0;
+	size_t offset_of_ip6_daddr = offsetof(struct ipv6hdr, daddr);
+	size_t offset_of_ip6_saddr = offsetof(struct ipv6hdr, saddr);
+	u32 idx;
 
-	switch (act->mangle.offset) {
- 		case offsetof(struct ipv6hdr, saddr):
- 			dest = &data->v6.src_addr;
- 		        break;
- 		case offsetof(struct ipv6hdr, daddr):
- 			dest = &data->v6.dst_addr;
-         		break;
- 	}
-
-	memcpy(dest, &act->mangle.val, sizeof(struct in6_addr));
+	if (act->mangle.offset >= offset_of_ip6_saddr && act->mangle.offset < offset_of_ip6_daddr) {
+		idx = (act->mangle.offset - offset_of_ip6_saddr) / 4;
+		dest = &data->v6.src_addr.s6_addr32[idx];
+	} else if (act->mangle.offset >= offset_of_ip6_daddr &&
+		   act->mangle.offset < offset_of_ip6_daddr + 16) {
+		idx = (act->mangle.offset - offset_of_ip6_daddr) / 4;
+		dest = &data->v6.dst_addr.s6_addr32[idx];
+	}
+	if (dest)
+		memcpy(dest, &act->mangle.val, sizeof(u32));
 
 	return 0;
 }
@@ -444,6 +447,8 @@ mtk_flow_offload_stats(struct mtk_eth *eth, struct flow_cls_offload *f)
 	return 0;
 }
 
+static DEFINE_MUTEX(mtk_flow_offload_mutex);
+
 static int
 mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_priv)
 {
@@ -451,6 +456,7 @@ mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_pri
 	struct net_device *dev = cb_priv;
 	struct mtk_mac *mac = netdev_priv(dev);
 	struct mtk_eth *eth = mac->hw;
+	int err;
 
 	if (!tc_can_offload(dev))
 		return -EOPNOTSUPP;
@@ -458,18 +464,24 @@ mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_pri
 	if (type != TC_SETUP_CLSFLOWER)
 		return -EOPNOTSUPP;
 
+	mutex_down(&mtk_flow_offload_mutex);
 	switch (cls->command) {
 	case FLOW_CLS_REPLACE:
-		return mtk_flow_offload_replace(eth, cls);
+		err = mtk_flow_offload_replace(eth, cls);
+		break;
 	case FLOW_CLS_DESTROY:
-		return mtk_flow_offload_destroy(eth, cls);
+		err = mtk_flow_offload_destroy(eth, cls);
+		break;
 	case FLOW_CLS_STATS:
-		return mtk_flow_offload_stats(eth, cls);
+		err = mtk_flow_offload_stats(eth, cls);
+		break;
 	default:
-		return -EOPNOTSUPP;
+		err = -EOPNOTSUPP;
+		break;
 	}
+	mutex_up(&mtk_flow_offload_mutex);
 
-	return 0;
+	return err;
 }
 
 static int
