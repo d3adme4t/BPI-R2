@@ -464,7 +464,7 @@ mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_pri
 	if (type != TC_SETUP_CLSFLOWER)
 		return -EOPNOTSUPP;
 
-	mutex_down(&mtk_flow_offload_mutex);
+	mutex_lock(&mtk_flow_offload_mutex);
 	switch (cls->command) {
 	case FLOW_CLS_REPLACE:
 		err = mtk_flow_offload_replace(eth, cls);
@@ -479,7 +479,7 @@ mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_pri
 		err = -EOPNOTSUPP;
 		break;
 	}
-	mutex_up(&mtk_flow_offload_mutex);
+	mutex_unlock(&mtk_flow_offload_mutex);
 
 	return err;
 }
