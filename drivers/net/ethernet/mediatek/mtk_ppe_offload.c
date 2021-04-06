@@ -394,7 +394,7 @@ mtk_flow_offload_replace(struct mtk_eth *eth, struct flow_cls_offload *f)
 	}
 
 	entry->hash = hash;
-	err = rhashtable_lookup_insert_fast(&eth->flow_table, &entry->node,
+	err = rhashtable_insert_fast(&eth->flow_table, &entry->node,
 				     mtk_flow_ht_params);
 	if (err < 0)
 		goto clear_flow;
