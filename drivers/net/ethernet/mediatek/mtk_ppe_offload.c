@@ -394,8 +394,10 @@ mtk_flow_offload_replace(struct mtk_eth *eth, struct flow_cls_offload *f)
 	}
 
 	entry->hash = hash;
+	spin_lock_bh(&eth->flow_table.lock);
 	err = rhashtable_insert_fast(&eth->flow_table, &entry->node,
 				     mtk_flow_ht_params);
+	spin_unlock_bh(&eth->flow_table.lock);
 	if (err < 0)
 		goto clear_flow;
 
@@ -418,8 +420,10 @@ mtk_flow_offload_destroy(struct mtk_eth *eth, struct flow_cls_offload *f)
 		return -ENOENT;
 
 	mtk_foe_entry_clear(&eth->ppe, entry->hash);
+	spin_lock_bh(&eth->flow_table.lock);
 	rhashtable_remove_fast(&eth->flow_table, &entry->node,
 			       mtk_flow_ht_params);
+	spin_unlock_bh(&eth->flow_table.lock);
 	kfree(entry);
 
 	return 0;
@@ -447,7 +451,6 @@ mtk_flow_offload_stats(struct mtk_eth *eth, struct flow_cls_offload *f)
 	return 0;
 }
 
-static DEFINE_MUTEX(mtk_flow_offload_mutex);
 
 static int
 mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_priv)
@@ -464,7 +467,6 @@ mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_pri
 	if (type != TC_SETUP_CLSFLOWER)
 		return -EOPNOTSUPP;
 
-	mutex_lock(&mtk_flow_offload_mutex);
 	switch (cls->command) {
 	case FLOW_CLS_REPLACE:
 		err = mtk_flow_offload_replace(eth, cls);
@@ -479,7 +481,6 @@ mtk_eth_setup_tc_block_cb(enum tc_setup_type type, void *type_data, void *cb_pri
 		err = -EOPNOTSUPP;
 		break;
 	}
-	mutex_unlock(&mtk_flow_offload_mutex);
 
 	return err;
 }
