@@ -752,6 +752,7 @@ struct bpf_jit_poke_descriptor {
 	void *tailcall_target;
 	void *tailcall_bypass;
 	void *bypass_addr;
+	void *aux;
 	union {
 		struct {
 			struct bpf_map *map;
@@ -1255,6 +1256,11 @@ struct bpf_prog *bpf_prog_get_curr_or_next(u32 *id);
 extern int sysctl_unprivileged_bpf_disabled;
 
 static inline bool bpf_allow_ptr_leaks(void)
+{
+	return perfmon_capable();
+}
+
+static inline bool bpf_allow_uninit_stack(void)
 {
 	return perfmon_capable();
 }
