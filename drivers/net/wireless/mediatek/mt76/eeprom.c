@@ -9,54 +9,13 @@
 #include <linux/etherdevice.h>
 #include "mt76.h"
 
-static int
-mt76_get_eeprom_file(struct mt76_dev *dev, int len)
-{
-	char path[64]="";
-	struct file *fp;
-	loff_t pos=0;
-	int ret;
-	struct inode *inode = NULL;
-	loff_t size;
-
-	ret = snprintf(path,sizeof(path),"/lib/firmware/mediatek/%s_rf.bin",dev->dev->driver->name);
-	if(ret<0)
-		return -EINVAL;
-	dev_info(dev->dev,"Load eeprom: %s\n",path);
-	fp = filp_open(path, O_RDONLY, 0);
-	if (IS_ERR(fp)) {
-		dev_info(dev->dev,"Open eeprom file failed: %s\n",path);
-		return -ENOENT;
-	}
-
-	inode = file_inode(fp);
-	if ((!S_ISREG(inode->i_mode) && !S_ISBLK(inode->i_mode))) {
-		printk(KERN_ALERT "invalid file type: %s\n", path);
-		return -ENOENT;
-	}
-	size = i_size_read(inode->i_mapping->host);
-	if (size < 0)
-	{
-		printk(KERN_ALERT "failed getting size of %s size:%lld \n",path,size);
-		return -ENOENT;
-	}
-	ret = kernel_read(fp, dev->eeprom.data, len, &pos);
-	if(ret < size){
-		dev_info(dev->dev,"Load eeprom ERR, count %d byte (len:%d)\n",ret,len);
-		return -ENOENT;
-	}
-	filp_close(fp, 0);
-	dev_info(dev->dev,"Load eeprom OK, count %d byte\n",ret);
-
-	return 0;
-}
-
 int mt76_get_of_eeprom(struct mt76_dev *dev, void *eep, int offset, int len)
 {
 #if defined(CONFIG_OF) && defined(CONFIG_MTD)
 	struct device_node *np = dev->dev->of_node;
 	struct mtd_info *mtd;
 	const __be32 *list;
+	const void *data;
 	const char *part;
 	phandle phandle;
 	int size;
@@ -65,6 +24,16 @@ int mt76_get_of_eeprom(struct mt76_dev *dev, void *eep, int offset, int len)
 
 	if (!np)
 		return -ENOENT;
+
+	data = of_get_property(np, "mediatek,eeprom-data", &size);
+	if (data) {
+		if (size > len)
+			return -EINVAL;
+
+		memcpy(eep, data, size);
+
+		return 0;
+	}
 
 	list = of_get_property(np, "mediatek,mtd-eeprom", &size);
 	if (!list)
@@ -93,11 +62,14 @@ int mt76_get_of_eeprom(struct mt76_dev *dev, void *eep, int offset, int len)
 		goto out_put_node;
 	}
 
-	offset = be32_to_cpup(list);
+	offset += be32_to_cpup(list);
 	ret = mtd_read(mtd, offset, len, &retlen, eep);
 	put_mtd_device(mtd);
-	if (ret)
+	if (ret) {
+		dev_err(dev->dev, "reading EEPROM from mtd %s failed: %i\n",
+			part, ret);
 		goto out_put_node;
+	}
 
 	if (retlen < len) {
 		ret = -EINVAL;
@@ -132,6 +104,7 @@ void
 mt76_eeprom_override(struct mt76_phy *phy)
 {
 	struct mt76_dev *dev = phy->dev;
+
 	struct device_node *np = dev->dev->of_node;
 
 	of_get_mac_address(np, phy->macaddr);
@@ -327,6 +300,9 @@ s8 mt76_get_rate_power_limits(struct mt76_phy *phy,
 	case NL80211_BAND_5GHZ:
 		band = '5';
 		break;
+	case NL80211_BAND_6GHZ:
+		band = '6';
+		break;
 	default:
 		return target_power;
 	}
@@ -373,6 +349,6 @@ mt76_eeprom_init(struct mt76_dev *dev, int len)
 	if (!dev->eeprom.data)
 		return -ENOMEM;
 
-	return (!mt76_get_eeprom_file(dev, len)) ||(!mt76_get_of_eeprom(dev, dev->eeprom.data, 0, len));
+	return !mt76_get_of_eeprom(dev, dev->eeprom.data, 0, len);
 }
 EXPORT_SYMBOL_GPL(mt76_eeprom_init);
