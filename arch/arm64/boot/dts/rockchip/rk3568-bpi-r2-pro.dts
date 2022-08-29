@@ -86,7 +86,7 @@
 		vin-supply = <&dc_12v>;
 	};
 
-	pcie30_avdd0v9: pcie30-avdd0v9 {
+	pcie30_avdd0v9: pcie30-avdd0v9-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "pcie30_avdd0v9";
 		regulator-always-on;
@@ -96,7 +96,7 @@
 		vin-supply = <&vcc3v3_sys>;
 	};
 
-	pcie30_avdd1v8: pcie30-avdd1v8 {
+	pcie30_avdd1v8: pcie30-avdd1v8-regulator {
 		compatible = "regulator-fixed";
 		regulator-name = "pcie30_avdd1v8";
 		regulator-always-on;

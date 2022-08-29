@@ -177,8 +177,8 @@ static int rockchip_p3phy_rk3588_init(struct rockchip_p3phy_priv *priv)
 					reg, RK3588_SRAM_INIT_DONE(reg),
 					0, 500);
 	if (ret)
-		dev_err(&priv->phy->dev,"lock failed 0x%x, check input refclk and power supply\n",
-		        reg);
+		dev_err(&priv->phy->dev, "lock failed 0x%x, check input refclk and power supply\n",
+			reg);
 	return ret;
 }
 
@@ -193,7 +193,7 @@ static int rochchip_p3phy_init(struct phy *phy)
 
 	ret = clk_bulk_prepare_enable(priv->num_clks, priv->clks);
 	if (ret) {
-		dev_err(&priv->phy->dev,"failed to enable PCIe bulk clks %d\n", ret);
+		dev_err(&priv->phy->dev, "failed to enable PCIe bulk clks %d\n", ret);
 		return ret;
 	}
 
